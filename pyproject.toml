@@ -1,0 +1,27 @@
+[project]
+name = "mlp-trab2"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "ipykernel>=7.4.0",
+    "librosa>=1.0.0",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.4",
+    "pandas>=3.1.0",
+    "scikit-learn>=1.9.1",
+    "soundata>=1.0.1",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ykk*"]
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+soundata = { git = "https://github.com/soundata/soundata.git" }
