@@ -9,7 +9,12 @@ dependencies = [
     "numpy>=2.5.4",
     "pandas>=3.1.0",
     "scikit-learn>=1.9.1",
+    "seaborn>=0.13.2",
     "soundata>=1.0.1",
+    "torch>=2.14.1",
+    "torchaudio>=2.11.0",
+    "torchcodec>=0.17.0",
+    "torchvision>=0.29.1",
 ]
 
 [build-system]
@@ -25,3 +30,9 @@ package = true
 
 [tool.uv.sources]
 soundata = { git = "https://github.com/soundata/soundata.git" }
+
+[tool.uv.workspace]
+members = [
+    "_refs/RIRPINN",
+    "_refs/DecayFitNet",
+]
