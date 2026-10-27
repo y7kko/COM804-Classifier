@@ -2,20 +2,18 @@ import pandas as pd
 import torchaudio
 from torchaudio import transforms
 from .._math import dsp
+from torch.utils.data import Dataset
 
-class urban8k:
-    def __init__(self,root_path='data/urbansound8k',augmentation=False,fs=44100):
+
+class urban8k(Dataset):
+    def __init__(self,root_path='data/urbansound8k',augmentation=False,fs=44100,folds=None):
         self.data_path = root_path.replace('\\','/').removesuffix('/')
         self.metadata = None
         self.augmentation = augmentation
         self.fs = fs
+
         try:
-            self.metadata = pd.read_csv(f'{self.data_path}/metadata/Urbansound8k.csv')
-            self.metadata['file_path'] = ('fold' 
-                                          + self.metadata['fold'].astype(str) 
-                                          + '/' 
-                                          + self.metadata['slice_file_name'].astype(str)
-                                          )
+            self.metadata = self._load_metadata(data_path=self.data_path)
         except:
             print('metadata not found! To download use `download_dataset()`')
 
@@ -25,6 +23,10 @@ class urban8k:
                                                 "hop_length": 160,
                                                 "n_mels": 23
                                                 })
+
+        if not (folds is None):
+            indexes = self.find_fold_indexes(folds)
+            self.metadata = self.metadata.loc[indexes].reset_index(drop=True)
 
 
     def id_to_class(self,id:int) -> str:
@@ -36,18 +38,12 @@ class urban8k:
         return classes[id]
 
 
-    def _load_file(self,path):
-        """Load audio file in specified path
-        Returns:
-            ndarray,float: Audio frames and sampling frequency
-        """
-        return torchaudio.load(path)
-
     def __getitem__(self, index):
         signal,fs_,label = self.get_wavfile(index)
         signal          = dsp.ensure_mono(signal)
         signal          = dsp.resample(signal,fs=fs_,fs_new=self.fs)
         signal          = dsp.zero_pad(signal,fs_,4.0)
+
         if self.augmentation:
             pass
 
@@ -71,10 +67,15 @@ class urban8k:
         return signal, fs, label
 
 
-    def find_fold_indexes(self,fold):
-        """Fold must be an integer between [1,10]
+    def find_fold_indexes(self,folds):
+        """Fold must be an integer or a list/tuple 
+        with values raging from [1-10]
         """
-        return self.meta[self.meta['fold']==fold].index
+        if isinstance(folds, (list, tuple)):
+            mask = self.metadata['fold'].isin(folds)
+        else:
+            mask = self.metadata['fold'] == folds
+        return self.metadata.index[mask]
 
 
     def download_dataset(self,path=None):
@@ -92,3 +93,19 @@ class urban8k:
 
     def __len__(self):
         return len(self.metadata)
+
+    @staticmethod
+    def _load_metadata(data_path):
+        metadata = pd.read_csv(f'{data_path}/metadata/Urbansound8k.csv')
+        metadata['file_path'] = ('fold' 
+                                + metadata['fold'].astype(str) 
+                                + '/' 
+                                + metadata['slice_file_name'].astype(str)
+                                )
+    @staticmethod
+    def _load_file(path):
+        """Load audio file in specified path
+        Returns:
+            ndarray,float: Audio frames and sampling frequency
+        """
+        return torchaudio.load(path)

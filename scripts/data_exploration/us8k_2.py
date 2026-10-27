@@ -53,3 +53,7 @@ plt.ylabel('Coeficiente cepstral')
 plt.tight_layout()
 plt.show()
 #%%
+metadata = dataset.metadata
+
+#%%
+dataset.find_fold_indexes([1,2,3])
