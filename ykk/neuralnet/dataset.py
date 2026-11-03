@@ -48,6 +48,7 @@ class urban8k(Dataset):
     def __getitem__(self, index):
         # load and standardize data
         signal, fs_, label  = self.get_wavfile(index)
+        signal              = dsp.remove_offset(signal)
         signal              = dsp.ensure_mono(signal)
         signal              = dsp.resample(signal,fs=fs_,fs_new=self.fs)
         signal              = dsp.normalize(signal)

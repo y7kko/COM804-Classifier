@@ -19,8 +19,7 @@ def ensure_mono(x):
     o formato (1,N)
     """
     if x.dim() > 1:
-        x = x[0,:]
-    
+        x = torch.mean(x,axis=0)
     x = torch.atleast_2d(x)
     return x
 
@@ -73,7 +72,7 @@ def center_crop(signal,fs,total_time):
     N_out = int(fs*total_time)
     
     if N_out >= N_in: #No need to crop
-        print('no need at all')
+        # print('no need at all')
         return signal
 
     N_to_crop = abs(N_in-N_out)
@@ -86,3 +85,6 @@ def center_crop(signal,fs,total_time):
     # out = torch.zeros(output_shape)
     # out[:,Nleft:Nright] = signal
     # return out
+
+def remove_offset(x):
+    return x - x.mean()
