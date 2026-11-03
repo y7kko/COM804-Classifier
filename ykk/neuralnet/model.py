@@ -19,3 +19,28 @@ class NeuralNetwork(nn.Module):
         x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits
+
+
+# class LeNet5(nn.Module):
+#     def __init__(self):
+#         """See:
+#         https://medium.com/@siddheshb008/lenet-5-architecture-explained-3b559cb2d52b)
+#         """
+#         super().__init__()
+#         self.flatten = nn.Flatten()
+#         self.linear_relu_stack = nn.Sequential(
+#             nn.Linear(28*28, 512),
+#             # nn.Conv2d()
+#             nn.ReLU(),
+#             nn.Linear(512, 512),
+#             nn.ReLU(),
+#             nn.Linear(512, 10)
+#         )
+#         self.device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
+
+
+#     def forward(self, x):
+#         x = self.flatten(x)
+#         logits = self.linear_relu_stack(x)
+#         return logits
+

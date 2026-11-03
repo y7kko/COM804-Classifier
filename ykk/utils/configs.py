@@ -8,4 +8,3 @@ def configure(config_path='configs.json'):
     if 'ffmpeg_dll' in configs:
         print('ffmpeg added to path')
         os.add_dll_directory(configs['ffmpeg_dll'])
-

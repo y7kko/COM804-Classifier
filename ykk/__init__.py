@@ -11,6 +11,7 @@ try:
 except:
     print("chdir wasn't changed, if something does't work you may want to call `ykk.set_project_dir()`")
 from . import neuralnet
-from .neuralnet import urban8k,NetTrainer,NeuralNetwork
+from .neuralnet import urban8k,NetTrainer
 from ._math import dsp
 from .utils import specgram
+from . import utils

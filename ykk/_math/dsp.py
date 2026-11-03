@@ -30,11 +30,15 @@ def resample(signal, fs, fs_new):
     signal = torchaudio.transforms.Resample(fs,fs_new,)(signal)
     return signal
 
-def zero_pad(signal,fs,total_time):
+def pad_until(signal,fs,total_time):
     """Recebe um sinal com formato
     """
     N = signal.shape[1]
     N_after = int(fs*total_time)
+    
+    if N >= N_after:
+        return signal
+
     output_shape = list(signal.shape)
     output_shape[1] = N_after
     out = torch.zeros(output_shape)
@@ -48,3 +52,37 @@ def pitch_shift(signal,fs,n_st):
     signal = librosa.effects.pitch_shift(signal.numpy(),
                                           sr=fs,n_steps=n_st)
     return torch.as_tensor(signal)
+
+def troll(signal,fs,time):
+    """applies circshift of `fs*time` to a signal. 
+    This function considers the last axis as time axis
+    """
+    signal = torch.roll(signal,int(time*fs),-1)
+    return signal
+
+def timestretch(signal,stretch_pct):
+    signal = librosa.effects.time_stretch(signal.numpy(),
+                                          rate=stretch_pct
+                                          )
+    return torch.as_tensor(signal)
+
+def center_crop(signal,fs,total_time):
+    """Recebe um sinal com formato
+    """
+    N_in = signal.shape[1]
+    N_out = int(fs*total_time)
+    
+    if N_out >= N_in: #No need to crop
+        print('no need at all')
+        return signal
+
+    N_to_crop = abs(N_in-N_out)
+    Nleft = int(N_to_crop/2)
+    Nright = N_to_crop-Nleft
+
+    return signal[...,Nleft:-Nright]
+    # output_shape = list(signal.shape)
+    # output_shape[1] = N_out
+    # out = torch.zeros(output_shape)
+    # out[:,Nleft:Nright] = signal
+    # return out

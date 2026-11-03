@@ -18,10 +18,10 @@ valid_fld = 1
 train_fld = separate_folds(valid_fld)
 
 valid_data = ykk.urban8k(augmentation=False,
-                        fs=fs,folds=valid_fld)
+                        fs=fs,filter_folds=valid_fld)
 
 train_data = ykk.urban8k(augmentation=True,
-                        fs=fs,folds=train_fld)
+                        fs=fs,filter_folds=train_fld)
 
 #%%
 train_dl= DataLoader(train_data,shuffle=True,)

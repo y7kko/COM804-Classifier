@@ -13,13 +13,37 @@ from ykk import dsp
 from torchaudio import transforms
 from torchaudio import functional as tF
 #%%
-dataset = urban8k()
+dataset = urban8k(augmentation=True)
 
+#%%
+winsize = 2048
+
+# hop = winsize-
+mel_kw = {"n_fft": 2048, "hop_length": 256, "n_mels": 23}
+dataset.set_mfcc_params(n_mfcc=20,
+                        mel_kw=mel_kw)
+
+#%%
+signal,_ = dataset[16]
+mfcc_plot = signal.squeeze(0).numpy()
+
+plt.figure(figsize=(10, 4))
+plt.imshow(mfcc_plot, aspect='auto', 
+           origin='lower', cmap='inferno',vmin=00,interpolation='none')
+plt.colorbar(label='Amplitude')
+plt.title('MFCC')
+plt.xlabel('Quadros (tempo)')
+plt.ylabel('Coeficiente cepstral')
+plt.tight_layout()
+plt.show()
+
+#%%
+signal.shape
 #%%
 signal,fs,_ = dataset.get_wavfile(16)
 signal = dsp.ensure_mono(signal)
 signal = dsp.resample(signal,fs,44100)
-signal = dsp.zero_pad(signal,fs,4.0)
+signal = dsp.pad_until(signal,fs,4.0)
 signal = dsp.normalize(signal)
 
 ykk.specgram(signal.numpy()[0],fs=44100,
