@@ -35,7 +35,7 @@ class urban8k(Dataset):
         self.set_mfcc_params(n_mfcc=20,mel_kw=mel_kw)
 
         if not (filter_folds is None):
-            print('tentndo')
+            # print('tentndo')
             indexes = self.find_fold_indexes(filter_folds)
             self.metadata = self.metadata.loc[indexes].reset_index(drop=True)
 
