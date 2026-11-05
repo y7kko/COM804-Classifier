@@ -3,8 +3,10 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
+import copy
+
 class NetTrainer():
-    def __init__(self,model,loss_fn,device=None):
+    def __init__(self,model,loss_fn,device=None,valid_loss_delta=1E-4):
         if device is None:
             self.device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
         else:
@@ -12,7 +14,6 @@ class NetTrainer():
 
         self.model = model
         self.loss_fn = loss_fn
-
         self.valid_loss = []
         self.train_loss = []
         self.accuracy = []
@@ -39,6 +40,7 @@ class NetTrainer():
                 loss, current = loss.item(), (batch + 1) * len(X)
                 print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
         self.train_loss.append(running_loss/seen)
+        return running_loss/seen
 
 
     @torch.no_grad()

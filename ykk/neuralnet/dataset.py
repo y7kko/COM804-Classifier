@@ -5,12 +5,13 @@ from .._math import dsp
 from torch.utils.data import Dataset
 import numpy as np
 import numpy.random as random
-
+import torch
+_preloaded = []
 
 
 class urban8k(Dataset):
     def __init__(self,root_path='data/urbansound8k',
-                 augmentation=False, fs=44100, filter_folds=None,random_state=None):
+                 augmentation=False, fs=44100, filter_folds=None,random_state=None,binary=False):
         self.data_path = root_path.replace('\\','/').removesuffix('/')
         self.metadata = None
         self.augmentation = augmentation
@@ -34,20 +35,47 @@ class urban8k(Dataset):
         mel_kw = {"n_fft": 2048, "hop_length": 256, "n_mels": 23}
         self.set_mfcc_params(n_mfcc=20,mel_kw=mel_kw)
 
+        if binary: #Separa em Mechanical/ Non Mechanical
+            self._binarize_ids()
+
         if not (filter_folds is None):
             # print('tentndo')
             indexes = self.find_fold_indexes(filter_folds)
             self.metadata = self.metadata.loc[indexes].reset_index(drop=True)
 
+        self._cached_features = False
 
 
-    def set_mfcc_params(self,n_mfcc=13,mel_kw=None):
+    def set_mfcc_params(self,n_mfcc=20,mel_kw=None):
         self.mfcc_transform = transforms.MFCC(self.fs,n_mfcc=n_mfcc,
                                             melkwargs=mel_kw)
 
     def __getitem__(self, index):
+        if self.cached_features:
+            return self.cache_features[index], self.cached_labels[index]
+
         # load and standardize data
         signal, fs_, label  = self.get_wavfile(index)
+        features = self._extract_features(signal,fs_)
+        return features,label
+
+    def cache_features(self):
+        all_features = []
+        all_labels = []
+        
+        for i in range(len(self)):
+            features, label = self[i]  # ou self.__getitem__(i)
+            all_features.append(features)
+            all_labels.append(label)
+        
+        # stack -> (N, dim1, dim2)
+        self.cached_features = torch.stack(all_features, dim=0)
+        self.cached_labels = torch.stack([torch.as_tensor(l) for l in all_labels], dim=0)
+        self._cached_features = True
+        return self.cached_features, self.cached_labels
+
+
+    def _extract_features(self,signal,fs_):
         signal              = dsp.remove_offset(signal)
         signal              = dsp.ensure_mono(signal)
         signal              = dsp.resample(signal,fs=fs_,fs_new=self.fs)
@@ -73,8 +101,7 @@ class urban8k(Dataset):
 
         # Applies MFCC transform
         features = self.mfcc_transform(signal)
-        return features,label
-
+        return features
 
     def get_wavfile(self,index):
         """Returns signal correspondent to the given index
@@ -124,8 +151,6 @@ class urban8k(Dataset):
     def __len__(self):
         return len(self.metadata)
 
-
-
     @staticmethod
     def _load_metadata(data_path):
         df = pd.read_csv(f'{data_path}/metadata/UrbanSound8K.csv')
@@ -158,3 +183,7 @@ class urban8k(Dataset):
         """Returns random values in the half open interval [-1,1[
         """
         return (self.rng.random(size)-.5)*2
+
+    def _binarize_ids(self,):
+        class_translate = np.array([1,1,0,0,1,1,1,1,1,0])
+        self.metadata['classID'] = class_translate[self.metadata['classID'].to_numpy()]
