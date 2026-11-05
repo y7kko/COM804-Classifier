@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 import numpy as np
 import numpy.random as random
 import torch
-_preloaded = []
+
 
 
 class urban8k(Dataset):
@@ -51,7 +51,7 @@ class urban8k(Dataset):
                                             melkwargs=mel_kw)
 
     def __getitem__(self, index):
-        if self.cached_features:
+        if self._cached_features:
             return self.cache_features[index], self.cached_labels[index]
 
         # load and standardize data
@@ -59,7 +59,7 @@ class urban8k(Dataset):
         features = self._extract_features(signal,fs_)
         return features,label
 
-    def cache_features(self):
+    def cache_features(self,):
         all_features = []
         all_labels = []
         
