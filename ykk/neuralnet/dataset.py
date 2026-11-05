@@ -33,7 +33,7 @@ class urban8k(Dataset):
             print('metadata not found! To download use `download_dataset()`')
 
         mel_kw = {"n_fft": 2048, "hop_length": 256, "n_mels": 23}
-        self.set_mfcc_params(n_mfcc=20,mel_kw=mel_kw)
+        self.set_transform(transforms.MFCC(self.fs,n_mfcc=20,melkwargs=mel_kw))
 
         if binary: #Separa em Mechanical/ Non Mechanical
             self._binarize_ids()
@@ -46,10 +46,8 @@ class urban8k(Dataset):
         self._signals_are_cached = False
         self._features_are_cached = False
 
-
-    def set_mfcc_params(self,n_mfcc=20,mel_kw=None):
-        self.mfcc_transform = transforms.MFCC(self.fs,n_mfcc=n_mfcc,
-                                            melkwargs=mel_kw)
+    def set_transform(self,transform_object):
+        self._transform = transform_object
 
     def __getitem__(self, index):
         if self._features_are_cached:
@@ -96,7 +94,7 @@ class urban8k(Dataset):
             signal = dsp.troll(signal, self.fs, time=int(t_roll))
 
         # Applies MFCC transform
-        features = self.mfcc_transform(signal)
+        features = self._transform(signal)
         return features
 
     def get_wavfile(self,index):

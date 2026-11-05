@@ -4,7 +4,6 @@ import torchaudio.transforms
 import librosa
 from torchaudio import functional as F
 
-
 def dB(x):
     """Calcula o valor em decibels
     """
