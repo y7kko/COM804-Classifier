@@ -73,25 +73,22 @@ class urban8k(Dataset):
     #     return self.cached_features, self.cached_labels
 
     def _extract_features(self,signal,fs_):
-        # signal              = dsp.remove_offset(signal)
-        # signal              = dsp.ensure_mono(signal)
-        # signal              = dsp.resample(signal,fs=fs_,fs_new=self.fs)
-        # signal              = dsp.normalize(signal)
 
         if self.augmentation:
-            stretch_pct = 1 + self._sym_rand() * (self.strech_pct/100)
             s_st = self._sym_rand() * self.shift_range
             # Muda a altura do sinal
             signal = dsp.pitch_shift(signal,self.fs,n_st=s_st)
-            # Muda o velocidade do sinal
-            signal = dsp.timestretch(signal,stretch_pct)
+            
+            # stretch_pct = 1 + self._sym_rand() * (self.strech_pct/100)
+            # signal = dsp.timestretch(signal,stretch_pct)
+            
 
-        # Mantem apenas o 4s centrais do audio (Sinais muito longos)
+        # Low overhead
         signal = dsp.center_crop(signal, self.fs, 4.0)
         signal = dsp.pad_until(signal, self.fs, 4.0)
 
-        #circshift deve ser apos zero pad, senão
-        # o final vira inutil
+
+        # Low overhead
         if self.augmentation:
             t_roll = self._sym_rand() * self.troll_range
             signal = dsp.troll(signal, self.fs, time=int(t_roll))
