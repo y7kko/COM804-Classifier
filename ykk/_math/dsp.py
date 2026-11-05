@@ -3,6 +3,8 @@ import torchaudio
 import torchaudio.transforms
 import librosa
 from torchaudio import functional as F
+
+
 def dB(x):
     """Calcula o valor em decibels
     """
@@ -49,11 +51,13 @@ def normalize(signal,):
     return signal/abs(signal).max()
 
 def pitch_shift(signal,fs,n_st):
-    signal = F.pitch_shift(signal,fs,n_st)
-    return signal
-    # signal = librosa.effects.pitch_shift(signal.numpy(),
-    #                                       sr=fs,n_steps=n_st)
-    # return torch.as_tensor(signal)
+
+    # F.pitch_shift tem algum problema de memory leakage
+    # signal = F.pitch_shift(signal,fs,n_st)
+    # return signal
+    signal = librosa.effects.pitch_shift(signal.numpy(),
+                                          sr=fs,n_steps=n_st)
+    return torch.as_tensor(signal)
 
 def troll(signal,fs,time):
     """applies circshift of `fs*time` to a signal. 

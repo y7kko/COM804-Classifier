@@ -76,17 +76,18 @@ class urban8k(Dataset):
     def _extract_features(self,signal,fs_):
 
         if self.augmentation:
-            s_st = self._sym_rand() * self.shift_range
             # Muda a altura do sinal
-            signal = dsp.pitch_shift(signal,self.fs,n_st=s_st)
+            # s_st = self._sym_rand() * self.shift_range
+            # signal = dsp.pitch_shift(signal,self.fs,n_st=s_st)
             
-            # stretch_pct = 1 + self._sym_rand() * (self.strech_pct/100)
-            # signal = dsp.timestretch(signal,stretch_pct)
+            stretch_pct = 1 + self._sym_rand() * (self.strech_pct/100)
+            signal = dsp.timestretch(signal,stretch_pct)
+            
+            # "Padroniza" novamente
+            signal = dsp.center_crop(signal, self.fs, 3.0)
+            signal = dsp.pad_until(signal, self.fs, 3.0)
             
 
-        # Low overhead
-        signal = dsp.center_crop(signal, self.fs, 3.0)
-        signal = dsp.pad_until(signal, self.fs, 3.0)
 
 
         # Low overhead
