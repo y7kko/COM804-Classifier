@@ -44,6 +44,7 @@ class urban8k(Dataset):
             self.metadata = self.metadata.loc[indexes].reset_index(drop=True)
 
         self._signals_are_cached = False
+        self._features_are_cached = False
 
 
     def set_mfcc_params(self,n_mfcc=20,mel_kw=None):
@@ -51,26 +52,26 @@ class urban8k(Dataset):
                                             melkwargs=mel_kw)
 
     def __getitem__(self, index):
+        if self._features_are_cached:
+            return self.cached_features[index],self.cached_labels[index]
         # load and standardize data
         signal, fs_, label  = self.get_wavfile(index)
         features = self._extract_features(signal,fs_)
         return features,label
 
-    # def cache_features(self,):
-    #     all_features = []
-    #     all_labels = []
+    def cache_features(self,):
 
-
-    #     for i in tqdm(range(len(self)),desc='Caching features'):
-    #         features, label = self[i]  # ou self.__getitem__(i)
-    #         all_features.append(features)
-    #         all_labels.append(label)
+        all_features, all_labels =[], []
+        for i in tqdm(range(len(self)),desc='Caching features'):
+            features, label = self[i]  # ou self.__getitem__(i)
+            all_features.append(features)
+            all_labels.append(label)
         
-    #     # stack -> (N, dim1, dim2)
-    #     self.cached_features = torch.stack(all_features, dim=0)
-    #     self.cached_labels = torch.stack([torch.as_tensor(l) for l in all_labels], dim=0)
-    #     self._cached_signals = True
-    #     return self.cached_features, self.cached_labels
+        # stack -> (N, dim1, dim2)
+        self.cached_features = torch.stack(all_features, dim=0)
+        self.cached_labels = torch.stack([torch.as_tensor(l) for l in all_labels], dim=0)
+        self._features_are_cached = True
+        return self.cached_features, self.cached_labels
 
     def _extract_features(self,signal,fs_):
 
@@ -123,6 +124,20 @@ class urban8k(Dataset):
 
 
     def cache_signals(self,):
+        s0, _, _ = self.get_wavfile(0)
+        N = len(self)
+        self.cached_signals = torch.empty((N, *s0.shape), dtype=s0.dtype)
+        self.cached_labels  = torch.empty(N, dtype=torch.long)
+        for i in tqdm(range(N), desc='Caching signals'):
+            sig, _, lab = self.get_wavfile(i)
+            self.cached_signals[i] = sig      # cópia in-place, sem pico
+            self.cached_labels[i]  = lab
+
+        self._signals_are_cached = True
+        # return self.cached_signals, self.cached_labels
+
+
+    def cache_signals_old(self,):
         all_signals = []
         all_labels = []
 
