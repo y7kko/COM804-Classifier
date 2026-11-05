@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 import numpy as np
 import numpy.random as random
 import torch
-
+from tqdm.auto import tqdm
 
 
 class urban8k(Dataset):
@@ -62,8 +62,9 @@ class urban8k(Dataset):
     def cache_features(self,):
         all_features = []
         all_labels = []
-        
-        for i in range(len(self)):
+
+
+        for i in tqdm(range(len(self)),desc='Caching features'):
             features, label = self[i]  # ou self.__getitem__(i)
             all_features.append(features)
             all_labels.append(label)
