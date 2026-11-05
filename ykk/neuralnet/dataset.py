@@ -52,7 +52,7 @@ class urban8k(Dataset):
 
     def __getitem__(self, index):
         if self._cached_features:
-            return self.cache_features[index], self.cached_labels[index]
+            return self.cached_features[index], self.cached_labels[index]
 
         # load and standardize data
         signal, fs_, label  = self.get_wavfile(index)
