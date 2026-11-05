@@ -43,7 +43,7 @@ class urban8k(Dataset):
             indexes = self.find_fold_indexes(filter_folds)
             self.metadata = self.metadata.loc[indexes].reset_index(drop=True)
 
-        self._cached_features = False
+        self._signals_are_cached = False
 
 
     def set_mfcc_params(self,n_mfcc=20,mel_kw=None):
@@ -51,36 +51,32 @@ class urban8k(Dataset):
                                             melkwargs=mel_kw)
 
     def __getitem__(self, index):
-        if self._cached_features:
-            return self.cached_features[index], self.cached_labels[index]
-
         # load and standardize data
         signal, fs_, label  = self.get_wavfile(index)
         features = self._extract_features(signal,fs_)
         return features,label
 
-    def cache_features(self,):
-        all_features = []
-        all_labels = []
+    # def cache_features(self,):
+    #     all_features = []
+    #     all_labels = []
 
 
-        for i in tqdm(range(len(self)),desc='Caching features'):
-            features, label = self[i]  # ou self.__getitem__(i)
-            all_features.append(features)
-            all_labels.append(label)
+    #     for i in tqdm(range(len(self)),desc='Caching features'):
+    #         features, label = self[i]  # ou self.__getitem__(i)
+    #         all_features.append(features)
+    #         all_labels.append(label)
         
-        # stack -> (N, dim1, dim2)
-        self.cached_features = torch.stack(all_features, dim=0)
-        self.cached_labels = torch.stack([torch.as_tensor(l) for l in all_labels], dim=0)
-        self._cached_features = True
-        return self.cached_features, self.cached_labels
-
+    #     # stack -> (N, dim1, dim2)
+    #     self.cached_features = torch.stack(all_features, dim=0)
+    #     self.cached_labels = torch.stack([torch.as_tensor(l) for l in all_labels], dim=0)
+    #     self._cached_signals = True
+    #     return self.cached_features, self.cached_labels
 
     def _extract_features(self,signal,fs_):
-        signal              = dsp.remove_offset(signal)
-        signal              = dsp.ensure_mono(signal)
-        signal              = dsp.resample(signal,fs=fs_,fs_new=self.fs)
-        signal              = dsp.normalize(signal)
+        # signal              = dsp.remove_offset(signal)
+        # signal              = dsp.ensure_mono(signal)
+        # signal              = dsp.resample(signal,fs=fs_,fs_new=self.fs)
+        # signal              = dsp.normalize(signal)
 
         if self.augmentation:
             stretch_pct = 1 + self._sym_rand() * (self.strech_pct/100)
@@ -113,11 +109,36 @@ class urban8k(Dataset):
         Returns:
             signal(Tensor) ,fs(float),label(int)
         """
+        if self._signals_are_cached:
+            return self.cached_signals[index],self.fs,self.cached_labels[index]
+        
         data = self.metadata.iloc[index]
         label = data['classID']
-        path = f'{self.data_path}/audio/{data['file_path']}'
+        path = f"{self.data_path}/audio/{data['file_path']}"
         signal, fs = self._load_file(path)
-        return signal, fs, label
+        signal              = dsp.remove_offset(signal)
+        signal              = dsp.ensure_mono(signal)
+        signal              = dsp.resample(signal,fs=fs,fs_new=self.fs)
+        signal              = dsp.normalize(signal)
+        signal = dsp.pad_until(signal, self.fs, 4.0)
+        return signal,self.fs, label
+
+
+    def cache_signals(self,):
+        all_signals = []
+        all_labels = []
+
+        for i in tqdm(range(len(self)),desc='Caching signals'):
+            signal,_ , label = self.get_wavfile(i)  # ou self.__getitem__(i)
+            all_signals.append(signal)
+            all_labels.append(label)
+        
+        # stack -> (N, dim1, dim2)
+        self.cached_signals = torch.stack(all_signals, dim=0)
+        self.cached_labels = torch.stack([torch.as_tensor(l) for l in all_labels], dim=0)
+        self._signals_are_cached = True
+        return self.cached_signals, self.cached_labels
+
 
 
     def find_fold_indexes(self,folds):
