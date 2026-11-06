@@ -197,20 +197,16 @@ class urban8k(Dataset):
             self._feature_cache_size = augmentation_sets
         
         self.cached_features = []
-        self.cached_labels  = torch.empty(N, dtype=torch.long)
+        # self.cached_labels  = torch.empty(N, dtype=torch.long)
         for _set in range(self._feature_cache_size):
             cached_feature_set = torch.empty((N, *s0.shape), dtype=s0.dtype)
             for i in tqdm(range(len(self)),desc=f'Caching features ({_set}/{self._feature_cache_size-1})',disable=(not waitbar)):
                 features, fs, label = self.get_wavfile(i)
                 features = self._extract_features(features,fs)
                 cached_feature_set[i] = features
-                self.cached_labels[i] = label #sim, podia sair do loop...
+                # self.cached_labels[i] = label #sim, podia sair do loop...
             self.cached_features.append(cached_feature_set) # (SET)(N,s01,s02)
-
-        # sanity check
-        if (self.cached_labels < 0).any():
-            bad = (self.cached_labels < 0).nonzero().flatten().tolist()
-            raise RuntimeError(f"Uninitialized labels at indices: {bad[:10]}")
+        self.cached_labels = torch.as_tensor(self.metadata['classID'].to_numpy(),dtype=torch.long)
 
         self._features_are_cached = True
 
