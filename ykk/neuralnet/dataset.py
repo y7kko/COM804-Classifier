@@ -63,7 +63,6 @@ class urban8k(Dataset):
         return features,label
 
 
-
     def _extract_features(self,signal,fs_):
         if self.augmentation_is_enabled:
             signal = self.augment(signal.numpy(),self.fs)
@@ -188,12 +187,12 @@ class urban8k(Dataset):
     #     return self.cached_features, self.cached_labels
 
 
-    def cache_signals(self,):
+    def cache_signals(self,waitbar=True):
         s0, _, _ = self.get_wavfile(0)
         N = len(self)
         self.cached_signals = torch.empty((N, *s0.shape), dtype=s0.dtype)
         self.cached_labels  = torch.empty(N, dtype=torch.long)
-        for i in tqdm(range(N), desc='Caching signals'):
+        for i in tqdm(range(N), desc='Caching signals',disable=(not waitbar)):
             sig, _, lab = self.get_wavfile(i)
             self.cached_signals[i] = sig      # cópia in-place, sem pico
             self.cached_labels[i]  = lab
@@ -202,23 +201,19 @@ class urban8k(Dataset):
         # return self.cached_signals, self.cached_labels
 
 
-    def cache_features(self,augmentation_sets=None):
+    def cache_features(self,augmentation_sets=None,waitbar=True):
         s0, _ = self[0]
         N = len(self)
 
-        if self.augmentation_is_enabled and augmentation_sets is None:
-            self._feature_cache_size = 1
-        elif not self.augmentation_is_enabled:
-            self._feature_cache_size = 1
-        else:
+        self._feature_cache_size = 1
+        if self.augmentation_is_enabled and not (augmentation_sets is None):
             self._feature_cache_size = augmentation_sets
-
         
         self.cached_features = []
         self.cached_labels  = torch.empty(N, dtype=torch.long)
         for _set in range(self._feature_cache_size):
             cached_feature_set = torch.empty((N, *s0.shape), dtype=s0.dtype)
-            for i in tqdm(range(len(self)),desc='Caching features'):
+            for i in tqdm(range(len(self)),desc=f'Caching features ({_set}/{augmentation_sets-1})',,disable=(not waitbar)):
                 features, label = self[i]
                 cached_feature_set[i] = features
                 self.cached_labels[i] = label #sim, podia sair do loop...
