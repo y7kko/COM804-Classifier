@@ -7,7 +7,7 @@ import numpy as np
 import numpy.random as random
 import torch
 from tqdm.auto import tqdm
-
+from audiomentations import Compose,PitchShift,TimeStretch
 
 class urban8k(Dataset):
     def __init__(self,root_path='data/urbansound8k',
@@ -43,6 +43,11 @@ class urban8k(Dataset):
             indexes = self.find_fold_indexes(filter_folds)
             self.metadata = self.metadata.loc[indexes].reset_index(drop=True)
 
+        self.augment = Compose([
+            PitchShift(-2,+2,p=.5),
+            TimeStretch(.8,1.2,True,p=.5)
+        ])
+
         self._signals_are_cached = False
         self._features_are_cached = False
 
@@ -52,6 +57,7 @@ class urban8k(Dataset):
     def __getitem__(self, index):
         if self._features_are_cached:
             return self.cached_features[index],self.cached_labels[index]
+
         # load and standardize data
         signal, fs_, label  = self.get_wavfile(index)
         features = self._extract_features(signal,fs_)
@@ -78,21 +84,18 @@ class urban8k(Dataset):
             # s_st = self._sym_rand() * self.shift_range
             # signal = dsp.pitch_shift(signal,self.fs,n_st=s_st)
             
-            stretch_pct = 1 + self._sym_rand() * (self.strech_pct/100)
-            signal = dsp.timestretch(signal,stretch_pct)
-            
-            # "Padroniza" novamente
-            signal = dsp.center_crop(signal, self.fs, 3.0)
-            signal = dsp.pad_until(signal, self.fs, 3.0)
-            
-
-
+            # stretch_pct = 1 + self._sym_rand() * (self.strech_pct/100)
+            # signal = dsp.timestretch(signal,stretch_pct)
+            # # "Padroniza" novamente
+            # signal = dsp.center_crop(signal, self.fs, 3.0)
+            # signal = dsp.pad_until(signal, self.fs, 3.0)
+            signal = self.augment(signal.numpy(),self.fs)
+            pass
 
         # Low overhead
         if self.augmentation:
             t_roll = self._sym_rand() * self.troll_range
             signal = dsp.troll(signal, self.fs, time=int(t_roll))
-
         # Applies MFCC transform
         features = self._transform(signal)
         return features
