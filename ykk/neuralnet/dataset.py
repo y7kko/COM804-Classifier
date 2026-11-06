@@ -200,7 +200,7 @@ class urban8k(Dataset):
         self.cached_labels  = torch.empty(N, dtype=torch.long)
         for _set in range(self._feature_cache_size):
             cached_feature_set = torch.empty((N, *s0.shape), dtype=s0.dtype)
-            for i in tqdm(range(len(self)),desc=f'Caching features ({_set}/{augmentation_sets-1})',disable=(not waitbar)):
+            for i in tqdm(range(len(self)),desc=f'Caching features ({_set}/{self._feature_cache_size-1})',disable=(not waitbar)):
                 features, fs, label = self.get_wavfile(i)
                 features = self._extract_features(features,fs)
                 cached_feature_set[i] = features
