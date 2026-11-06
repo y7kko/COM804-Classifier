@@ -85,19 +85,19 @@ class urban8k(Dataset):
         Returns:
             signal(Tensor) ,fs(float),label(int)
         """
-        if self._signals_are_cached:
-            return self.cached_signals[index],self.fs,self.cached_labels[index]
-        
         data = self.metadata.iloc[index]
         label = data['classID']
-        path = f"{self.data_path}/audio/{data['file_path']}"
-        signal, fs = self._load_file(path)
-        signal              = dsp.remove_offset(signal)
-        signal              = dsp.ensure_mono(signal)
-        signal              = dsp.resample(signal,fs=fs,fs_new=self.fs)
-        signal              = dsp.normalize(signal)
-        signal = dsp.center_crop(signal, self.fs, 3.0)
-        signal = dsp.pad_until(signal, self.fs, 3.0)
+        if self._signals_are_cached:
+            signal = self.cached_signals[index]
+        else:
+            path = f"{self.data_path}/audio/{data['file_path']}"
+            signal, fs = self._load_file(path)
+            signal              = dsp.remove_offset(signal)
+            signal              = dsp.ensure_mono(signal)
+            signal              = dsp.resample(signal,fs=fs,fs_new=self.fs)
+            signal              = dsp.normalize(signal)
+            signal = dsp.center_crop(signal, self.fs, 3.0)
+            signal = dsp.pad_until(signal, self.fs, 3.0)
         return signal,self.fs, int(label)
 
 
@@ -197,16 +197,15 @@ class urban8k(Dataset):
             self._feature_cache_size = augmentation_sets
         
         self.cached_features = []
-        # self.cached_labels  = torch.empty(N, dtype=torch.long)
+        self.cached_labels  = torch.empty(N, dtype=torch.long)
         for _set in range(self._feature_cache_size):
             cached_feature_set = torch.empty((N, *s0.shape), dtype=s0.dtype)
             for i in tqdm(range(len(self)),desc=f'Caching features ({_set}/{self._feature_cache_size-1})',disable=(not waitbar)):
                 features, fs, label = self.get_wavfile(i)
                 features = self._extract_features(features,fs)
                 cached_feature_set[i] = features
-                # self.cached_labels[i] = label #sim, podia sair do loop...
+                self.cached_labels[i] = int(label) #sim, podia sair do loop...
             self.cached_features.append(cached_feature_set) # (SET)(N,s01,s02)
-        self.cached_labels = torch.as_tensor(self.metadata['classID'].to_numpy(),dtype=torch.long)
 
         self._features_are_cached = True
 
