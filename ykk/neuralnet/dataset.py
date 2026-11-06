@@ -213,7 +213,7 @@ class urban8k(Dataset):
         self.cached_labels  = torch.empty(N, dtype=torch.long)
         for _set in range(self._feature_cache_size):
             cached_feature_set = torch.empty((N, *s0.shape), dtype=s0.dtype)
-            for i in tqdm(range(len(self)),desc=f'Caching features ({_set}/{augmentation_sets-1})',,disable=(not waitbar)):
+            for i in tqdm(range(len(self)),desc=f'Caching features ({_set}/{augmentation_sets-1})',disable=(not waitbar)):
                 features, label = self[i]
                 cached_feature_set[i] = features
                 self.cached_labels[i] = label #sim, podia sair do loop...
