@@ -14,12 +14,10 @@ class urban8k(Dataset):
                  augmentation=False, fs=44100, filter_folds=None,random_state=None,binary=False):
         self.data_path = root_path.replace('\\','/').removesuffix('/')
         self.metadata = None
-        self.augmentation = augmentation
+        self.augmentation_is_enabled = augmentation
         self.fs = fs
 
-        self.shift_range = 2.0
         self.troll_range = 4.0
-        self.strech_pct = 10
 
         self.random_state =random_state
         self.rng = np.random.default_rng(seed=random_state)
@@ -56,48 +54,23 @@ class urban8k(Dataset):
 
     def __getitem__(self, index):
         if self._features_are_cached:
-            return self.cached_features[index],self.cached_labels[index]
+            features, labels = self._get_cached_features(index)
+            return features,labels
 
         # load and standardize data
         signal, fs_, label  = self.get_wavfile(index)
         features = self._extract_features(signal,fs_)
         return features,label
 
-    def cache_features(self,):
-
-        all_features, all_labels =[], []
-        for i in tqdm(range(len(self)),desc='Caching features'):
-            features, label = self[i]  # ou self.__getitem__(i)
-            all_features.append(features)
-            all_labels.append(label)
-        
-        # stack -> (N, dim1, dim2)
-        self.cached_features = torch.stack(all_features, dim=0)
-        self.cached_labels = torch.stack([torch.as_tensor(l) for l in all_labels], dim=0)
-        self._features_are_cached = True
-        return self.cached_features, self.cached_labels
 
     def _extract_features(self,signal,fs_):
-
-        if self.augmentation:
-            # Muda a altura do sinal
-            # s_st = self._sym_rand() * self.shift_range
-            # signal = dsp.pitch_shift(signal,self.fs,n_st=s_st)
-            
-            # stretch_pct = 1 + self._sym_rand() * (self.strech_pct/100)
-            # signal = dsp.timestretch(signal,stretch_pct)
-            # # "Padroniza" novamente
-            # signal = dsp.center_crop(signal, self.fs, 3.0)
-            # signal = dsp.pad_until(signal, self.fs, 3.0)
+        if self.augmentation_is_enabled:
             signal = self.augment(signal.numpy(),self.fs)
             signal = torch.from_numpy(np.ascontiguousarray(signal))
-
-
-        # Low overhead
-        if self.augmentation:
+            
             t_roll = self._sym_rand() * self.troll_range
             signal = dsp.troll(signal, self.fs, time=int(t_roll))
-        # Applies MFCC transform
+
         features = self._transform(signal)
         return features
 
@@ -110,51 +83,20 @@ class urban8k(Dataset):
         Returns:
             signal(Tensor) ,fs(float),label(int)
         """
-        if self._signals_are_cached:
-            return self.cached_signals[index],self.fs,self.cached_labels[index]
-        
         data = self.metadata.iloc[index]
         label = data['classID']
-        path = f"{self.data_path}/audio/{data['file_path']}"
-        signal, fs = self._load_file(path)
-        signal              = dsp.remove_offset(signal)
-        signal              = dsp.ensure_mono(signal)
-        signal              = dsp.resample(signal,fs=fs,fs_new=self.fs)
-        signal              = dsp.normalize(signal)
-        signal = dsp.center_crop(signal, self.fs, 3.0)
-        signal = dsp.pad_until(signal, self.fs, 3.0)
-        return signal,self.fs, label
-
-
-    def cache_signals(self,):
-        s0, _, _ = self.get_wavfile(0)
-        N = len(self)
-        self.cached_signals = torch.empty((N, *s0.shape), dtype=s0.dtype)
-        self.cached_labels  = torch.empty(N, dtype=torch.long)
-        for i in tqdm(range(N), desc='Caching signals'):
-            sig, _, lab = self.get_wavfile(i)
-            self.cached_signals[i] = sig      # cópia in-place, sem pico
-            self.cached_labels[i]  = lab
-
-        self._signals_are_cached = True
-        # return self.cached_signals, self.cached_labels
-
-
-    def cache_signals_old(self,):
-        all_signals = []
-        all_labels = []
-
-        for i in tqdm(range(len(self)),desc='Caching signals'):
-            signal,_ , label = self.get_wavfile(i)  # ou self.__getitem__(i)
-            all_signals.append(signal)
-            all_labels.append(label)
-        
-        # stack -> (N, dim1, dim2)
-        self.cached_signals = torch.stack(all_signals, dim=0)
-        self.cached_labels = torch.stack([torch.as_tensor(l) for l in all_labels], dim=0)
-        self._signals_are_cached = True
-        return self.cached_signals, self.cached_labels
-
+        if self._signals_are_cached:
+            signal = self.cached_signals[index]
+        else:
+            path = f"{self.data_path}/audio/{data['file_path']}"
+            signal, fs = self._load_file(path)
+            signal              = dsp.remove_offset(signal)
+            signal              = dsp.ensure_mono(signal)
+            signal              = dsp.resample(signal,fs=fs,fs_new=self.fs)
+            signal              = dsp.normalize(signal)
+            signal = dsp.center_crop(signal, self.fs, 3.0)
+            signal = dsp.pad_until(signal, self.fs, 3.0)
+        return signal,self.fs, int(label)
 
 
     def find_fold_indexes(self,folds):
@@ -225,3 +167,52 @@ class urban8k(Dataset):
     def _binarize_ids(self,):
         class_translate = np.array([1,1,0,0,1,1,1,1,1,0])
         self.metadata['classID'] = class_translate[self.metadata['classID'].to_numpy()]
+
+
+
+
+    def cache_signals(self,waitbar=True):
+        s0, _, _ = self.get_wavfile(0)
+        N = len(self)
+        self.cached_signals = torch.empty((N, *s0.shape), dtype=s0.dtype)
+        self.cached_labels  = torch.empty(N, dtype=torch.long)
+        for i in tqdm(range(N), desc='Caching signals',disable=(not waitbar)):
+            sig, _, lab = self.get_wavfile(i)
+            self.cached_signals[i] = sig      # cópia in-place, sem pico
+            self.cached_labels[i]  = lab
+
+        self._signals_are_cached = True
+        # return self.cached_signals, self.cached_labels
+
+
+    def cache_features(self,augmentation_sets=None,waitbar=True):
+        s0, fs, _ = self.get_wavfile(0)
+        s0 = self._extract_features(s0,fs)
+        N = len(self)
+
+        self._feature_cache_size = 1
+        if self.augmentation_is_enabled and not (augmentation_sets is None):
+            self._feature_cache_size = augmentation_sets
+        
+        self.cached_features = []
+        self.cached_labels  = torch.empty(N, dtype=torch.long)
+        for _set in range(self._feature_cache_size):
+            cached_feature_set = torch.empty((N, *s0.shape), dtype=s0.dtype)
+            for i in tqdm(range(len(self)),desc=f'Caching features ({_set}/{self._feature_cache_size-1})',disable=(not waitbar)):
+                features, fs, label = self.get_wavfile(i)
+                features = self._extract_features(features,fs)
+                cached_feature_set[i] = features
+                self.cached_labels[i] = int(label) #sim, podia sair do loop...
+            self.cached_features.append(cached_feature_set) # (SET)(N,s01,s02)
+
+        self._features_are_cached = True
+
+
+    def _get_cached_features(self,index):
+        label = int(self.cached_labels[index])
+        if self.augmentation_is_enabled:
+            _set = self.rng.integers(0,self._feature_cache_size)
+            feature = self.cached_features[_set][index]
+        else:
+            feature = self.cached_features[0][index]
+        return feature, label
