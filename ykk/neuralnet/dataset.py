@@ -54,7 +54,8 @@ class urban8k(Dataset):
 
     def __getitem__(self, index):
         if self._features_are_cached:
-            return self._get_cached_features(index)
+            features,labels=self._get_cached_features(index)
+            return features,labels
             # return self.cached_features[index],self.cached_labels[index]
 
         # load and standardize data
@@ -97,7 +98,7 @@ class urban8k(Dataset):
         signal              = dsp.normalize(signal)
         signal = dsp.center_crop(signal, self.fs, 3.0)
         signal = dsp.pad_until(signal, self.fs, 3.0)
-        return signal,self.fs, label
+        return signal,self.fs, int(label)
 
 
     def find_fold_indexes(self,folds):
@@ -170,21 +171,6 @@ class urban8k(Dataset):
         self.metadata['classID'] = class_translate[self.metadata['classID'].to_numpy()]
 
 
-    # def cache_features(self,):
-    #     if self.augmentation_is_enabled:
-    #         print('Warning: augmentation is enabled')
-
-    #     all_features, all_labels =[], []
-    #     for i in tqdm(range(len(self)),desc='Caching features'):
-    #         features, label = self[i]  # ou self.__getitem__(i)
-    #         all_features.append(features)
-    #         all_labels.append(label)
-        
-    #     # stack -> (N, dim1, dim2)
-    #     self.cached_features = torch.stack(all_features, dim=0)
-    #     self.cached_labels = torch.stack([torch.as_tensor(l) for l in all_labels], dim=0)
-    #     self._features_are_cached = True
-    #     return self.cached_features, self.cached_labels
 
 
     def cache_signals(self,waitbar=True):
@@ -202,7 +188,8 @@ class urban8k(Dataset):
 
 
     def cache_features(self,augmentation_sets=None,waitbar=True):
-        s0, _ = self[0]
+        s0, fs, _ = self.get_wavfile(i)
+        s0 = self._extract_features(s0,fs)
         N = len(self)
 
         self._feature_cache_size = 1
@@ -214,10 +201,17 @@ class urban8k(Dataset):
         for _set in range(self._feature_cache_size):
             cached_feature_set = torch.empty((N, *s0.shape), dtype=s0.dtype)
             for i in tqdm(range(len(self)),desc=f'Caching features ({_set}/{augmentation_sets-1})',disable=(not waitbar)):
-                features, label = self[i]
+                features, fs, label = self.get_wavfile(i)
+                features = self._extract_features(features,fs)
                 cached_feature_set[i] = features
                 self.cached_labels[i] = label #sim, podia sair do loop...
             self.cached_features.append(cached_feature_set) # (SET)(N,s01,s02)
+
+        # sanity check
+        if (self.cached_labels < 0).any():
+            bad = (self.cached_labels < 0).nonzero().flatten().tolist()
+            raise RuntimeError(f"Uninitialized labels at indices: {bad[:10]}")
+
         self._features_are_cached = True
 
 
@@ -228,4 +222,4 @@ class urban8k(Dataset):
             feature = self.cached_features[_set][index]
         else:
             feature = self.cached_features[0][index]
-        return feature,label
+        return feature, label
