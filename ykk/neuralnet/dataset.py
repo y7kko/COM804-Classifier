@@ -188,7 +188,7 @@ class urban8k(Dataset):
 
 
     def cache_features(self,augmentation_sets=None,waitbar=True):
-        s0, fs, _ = self.get_wavfile(i)
+        s0, fs, _ = self.get_wavfile(0)
         s0 = self._extract_features(s0,fs)
         N = len(self)
 
