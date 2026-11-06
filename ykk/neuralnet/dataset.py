@@ -216,7 +216,7 @@ class urban8k(Dataset):
 
 
     def _get_cached_features(self,index):
-        label = self.cached_labels[index]
+        label = int(self.cached_labels[index])
         if self.augmentation_is_enabled:
             _set = self.rng.integers(0,self._feature_cache_size)
             feature = self.cached_features[_set][index]
