@@ -90,7 +90,8 @@ class urban8k(Dataset):
             # signal = dsp.center_crop(signal, self.fs, 3.0)
             # signal = dsp.pad_until(signal, self.fs, 3.0)
             signal = self.augment(signal.numpy(),self.fs)
-            pass
+            signal = torch.from_numpy(np.ascontiguousarray(signal))
+
 
         # Low overhead
         if self.augmentation:
