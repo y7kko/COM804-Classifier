@@ -216,3 +216,7 @@ class urban8k(Dataset):
         else:
             feature = self.cached_features[0][index]
         return feature, label
+
+    def _delete_cached_signals(self,):
+        del(self.cached_signals)
+        self._signals_are_cached = False
