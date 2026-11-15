@@ -68,8 +68,8 @@ class urban8k(Dataset):
             signal = self.augment(signal.numpy(),self.fs)
             signal = torch.from_numpy(np.ascontiguousarray(signal))
             
-            t_roll = self._sym_rand() * self.troll_range
-            signal = dsp.troll(signal, self.fs, time=int(t_roll))
+            # t_roll = self._sym_rand() * self.troll_range
+            # signal = dsp.troll(signal, self.fs, time=int(t_roll))
 
         features = self._transform(signal)
         return features
