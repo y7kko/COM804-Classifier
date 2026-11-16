@@ -7,7 +7,7 @@ import numpy as np
 import numpy.random as random
 import torch
 from tqdm.auto import tqdm
-from audiomentations import Compose,PitchShift,TimeStretch
+from audiomentations import Compose,PitchShift,TimeStretch,AddGaussianSNR
 
 class urban8k(Dataset):
     def __init__(self,root_path='data/urbansound8k',
@@ -42,8 +42,9 @@ class urban8k(Dataset):
             self.metadata = self.metadata.loc[indexes].reset_index(drop=True)
 
         self.augment = Compose([
+            AddGaussianSNR(min_snr_db=6,max_snr_db=40),
             PitchShift(-2,+2,p=.5),
-            TimeStretch(.8,1.2,True,p=.5)
+            TimeStretch(.8,1.2,True,p=.5),
         ])
 
         self._signals_are_cached = False
@@ -71,6 +72,7 @@ class urban8k(Dataset):
             # t_roll = self._sym_rand() * self.troll_range
             # signal = dsp.troll(signal, self.fs, time=int(t_roll))
 
+        signal = dsp.normalize(signal)
         features = self._transform(signal)
         return features
 
