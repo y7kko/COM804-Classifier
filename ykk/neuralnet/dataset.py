@@ -94,8 +94,8 @@ class urban8k(Dataset):
             signal              = dsp.ensure_mono(signal)
             signal              = dsp.resample(signal,fs=fs,fs_new=self.fs)
             signal              = dsp.normalize(signal)
-            # signal = dsp.center_crop(signal, self.fs, 3.0)
-            # signal = dsp.pad_until(signal, self.fs, 3.0)
+            signal = dsp.center_crop(signal, self.fs, 3.0)
+            signal = dsp.pad_until(signal, self.fs, 3.0)
         return signal,self.fs, int(label)
 
 
@@ -172,15 +172,13 @@ class urban8k(Dataset):
 
 
     def cache_signals(self,waitbar=True):
-        # s0, _, _ = self.get_wavfile(0)
+        s0, _, _ = self.get_wavfile(0)
         N = len(self)
-        # self.cached_signals = torch.empty((N, *s0.shape), dtype=s0.dtype)
-        self.cached_signals = []
+        self.cached_signals = torch.empty((N, *s0.shape), dtype=s0.dtype)
         self.cached_labels  = torch.empty(N, dtype=torch.long)
         for i in tqdm(range(N), desc='Caching signals',disable=(not waitbar)):
             sig, _, lab = self.get_wavfile(i)
-            # self.cached_signals[i] = sig
-            self.cached_signals.append(sig)      # cópia in-place, sem pico
+            self.cached_signals[i] = sig      # cópia in-place, sem pico
             self.cached_labels[i]  = lab
 
         self._signals_are_cached = True
@@ -199,13 +197,11 @@ class urban8k(Dataset):
         self.cached_features = []
         self.cached_labels  = torch.empty(N, dtype=torch.long)
         for _set in range(self._feature_cache_size):
-            # cached_feature_set = torch.empty((N, *s0.shape), dtype=s0.dtype)
-            cached_feature_set = []
+            cached_feature_set = torch.empty((N, *s0.shape), dtype=s0.dtype)
             for i in tqdm(range(len(self)),desc=f'Caching features ({_set}/{self._feature_cache_size-1})',disable=(not waitbar)):
                 features, fs, label = self.get_wavfile(i)
                 features = self._extract_features(features,fs)
-                # cached_feature_set[i] = features
-                cached_feature_set.append(features)
+                cached_feature_set[i] = features
                 self.cached_labels[i] = int(label) #sim, podia sair do loop...
             self.cached_features.append(cached_feature_set) # (SET)(N,s01,s02)
 
