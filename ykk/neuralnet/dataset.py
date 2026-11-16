@@ -63,8 +63,8 @@ class urban8k(Dataset):
         return features,label
 
 
-    def _extract_features(self,signal,fs_):
-        if self.augmentation_is_enabled:
+    def _extract_features(self,signal,fs_,augmentate=True):
+        if self.augmentation_is_enabled and augmentate:
             signal = self.augment(signal.numpy(),self.fs)
             signal = torch.from_numpy(np.ascontiguousarray(signal))
             
@@ -200,7 +200,7 @@ class urban8k(Dataset):
             cached_feature_set = torch.empty((N, *s0.shape), dtype=s0.dtype)
             for i in tqdm(range(len(self)),desc=f'Caching features ({_set}/{self._feature_cache_size-1})',disable=(not waitbar)):
                 features, fs, label = self.get_wavfile(i)
-                features = self._extract_features(features,fs)
+                features = self._extract_features(features,fs,augmentate=bool(i))
                 cached_feature_set[i] = features
                 self.cached_labels[i] = int(label) #sim, podia sair do loop...
             self.cached_features.append(cached_feature_set) # (SET)(N,s01,s02)
