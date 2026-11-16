@@ -47,6 +47,11 @@ class urban8k(Dataset):
             TimeStretch(.8,1.2,True,p=.5),
         ])
 
+        self.masks = [
+            transforms.TimeMasking(16, True,.3),
+            transforms.FrequencyMasking(8,True)
+        ]
+
         self._signals_are_cached = False
         self._features_are_cached = False
 
@@ -74,6 +79,8 @@ class urban8k(Dataset):
 
         signal = dsp.normalize(signal)
         features = self._transform(signal)
+        if self.augmentation_is_enabled and augmentate:
+            features = self._specmask(features)
         return features
 
     def get_wavfile(self,index):
@@ -222,3 +229,7 @@ class urban8k(Dataset):
     def _delete_cached_signals(self,):
         del(self.cached_signals)
         self._signals_are_cached = False
+
+    def _specmask(self,specgram):
+        idx = self.rng.integers(0,len(self.masks))
+        return self.masks[idx](specgram)
