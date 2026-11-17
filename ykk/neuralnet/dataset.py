@@ -83,7 +83,7 @@ class urban8k(Dataset):
             features = self._specmask(features)
         return features
 
-    def get_wavfile(self,index):
+    def get_wavfile(self,index,bypass_standadization=False):
         """Returns signal correspondent to the given index
 
         Args:
@@ -99,13 +99,15 @@ class urban8k(Dataset):
         else:
             path = f"{self.data_path}/audio/{data['file_path']}"
             signal, fs = self._load_file(path)
-            signal              = dsp.remove_offset(signal)
-            signal              = dsp.ensure_mono(signal)
-            signal              = dsp.resample(signal,fs=fs,fs_new=self.fs)
-            signal              = dsp.normalize(signal)
-            signal = dsp.center_crop(signal, self.fs, 3.0)
-            signal = dsp.pad_until(signal, self.fs, 3.0)
-        return signal,self.fs, int(label)
+            if not bypass_standadization:
+                signal              = dsp.remove_offset(signal)
+                signal              = dsp.ensure_mono(signal)
+                signal              = dsp.resample(signal,fs=fs,fs_new=self.fs)
+                signal              = dsp.normalize(signal)
+                signal = dsp.center_crop(signal, self.fs, 3.0)
+                signal = dsp.pad_until(signal, self.fs, 3.0)
+                fs = self.fs
+        return signal,fs, int(label)
 
 
     def find_fold_indexes(self,folds):
@@ -227,7 +229,8 @@ class urban8k(Dataset):
         return feature, label
 
     def _delete_cached_signals(self,):
-        del(self.cached_signals)
+        if hasattr(self,'cached_signals'):
+            del(self.cached_signals)
         self._signals_are_cached = False
 
     def _specmask(self,specgram):
