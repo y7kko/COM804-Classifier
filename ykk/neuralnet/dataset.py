@@ -41,11 +41,6 @@ class urban8k(Dataset):
             indexes = self.find_fold_indexes(filter_folds)
             self.metadata = self.metadata.loc[indexes].reset_index(drop=True)
 
-        self.augment = Compose([
-            AddGaussianSNR(min_snr_db=6,max_snr_db=40),
-            PitchShift(-2,+2,p=.5),
-            TimeStretch(.8,1.2,True,p=.5),
-        ])
 
         self.masks = [
             transforms.TimeMasking(16, True,.3),
@@ -60,30 +55,29 @@ class urban8k(Dataset):
 
     def __getitem__(self, index):
         if self._features_are_cached:
-            features, labels = self._get_cached_features(index)
-            return features,labels
+            features, label = self._get_cached_features(index)
+        else:
+            signal, fs_, label  = self.get_wavfile(index)
+            features = self._extract_features(signal,fs_)
 
-        # load and standardize data
-        signal, fs_, label  = self.get_wavfile(index)
-        features = self._extract_features(signal,fs_)
+        if self.augmentation_is_enabled:
+            features = self._specmask(features)
         return features,label
 
 
     def _extract_features(self,signal,fs_,augmentate=True):
-        if self.augmentation_is_enabled and augmentate:
-            signal = self.augment(signal.numpy(),self.fs)
-            signal = torch.from_numpy(np.ascontiguousarray(signal))
+        # if self.augmentation_is_enabled and augmentate:
+        #     signal = self.augment(signal.numpy(),self.fs)
+        #     signal = torch.from_numpy(np.ascontiguousarray(signal))
             
             # t_roll = self._sym_rand() * self.troll_range
             # signal = dsp.troll(signal, self.fs, time=int(t_roll))
 
         signal = dsp.normalize(signal)
         features = self._transform(signal)
-        if self.augmentation_is_enabled and augmentate:
-            features = self._specmask(features)
         return features
 
-    def get_wavfile(self,index,bypass_standadization=False):
+    def get_wavfile(self,index):
         """Returns signal correspondent to the given index
 
         Args:
@@ -99,15 +93,13 @@ class urban8k(Dataset):
         else:
             path = f"{self.data_path}/audio/{data['file_path']}"
             signal, fs = self._load_file(path)
-            if not bypass_standadization:
-                signal              = dsp.remove_offset(signal)
-                signal              = dsp.ensure_mono(signal)
-                signal              = dsp.resample(signal,fs=fs,fs_new=self.fs)
-                signal              = dsp.normalize(signal)
-                signal = dsp.center_crop(signal, self.fs, 3.0)
-                signal = dsp.pad_until(signal, self.fs, 3.0)
-                fs = self.fs
-        return signal,fs, int(label)
+            signal              = dsp.remove_offset(signal)
+            signal              = dsp.ensure_mono(signal)
+            signal              = dsp.resample(signal,fs=fs,fs_new=self.fs)
+            signal              = dsp.normalize(signal)
+            signal = dsp.center_crop(signal, self.fs, 3.0)
+            signal = dsp.pad_until(signal, self.fs, 3.0)
+        return signal,self.fs, int(label)
 
 
     def find_fold_indexes(self,folds):
@@ -234,5 +226,8 @@ class urban8k(Dataset):
         self._signals_are_cached = False
 
     def _specmask(self,specgram):
-        idx = self.rng.integers(0,len(self.masks))
-        return self.masks[idx](specgram)
+        output = specgram
+        for mask in self.masks:
+            if self.rng.random() < .5:   # p ex.: 0.5
+                output = mask(output)
+        return output
