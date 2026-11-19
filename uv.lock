@@ -1115,6 +1115,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "audiomentations" },
+    { name = "h5py" },
     { name = "ipykernel" },
     { name = "librosa" },
     { name = "matplotlib" },
@@ -1134,6 +1135,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "audiomentations", git = "https://github.com/iver56/audiomentations.git" },
+    { name = "h5py", specifier = ">=3.16.0" },
     { name = "ipykernel", specifier = ">=7.4.0" },
     { name = "librosa", specifier = ">=0.11.0" },
     { name = "matplotlib", specifier = ">=3.11.2" },
